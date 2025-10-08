@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Вибір автомобіля</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for the car selection app */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #121212;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* This container simulates the phone screen */
+        .app-container {
+            width: 100%;
+            height: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            background-color: #000000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden; /* Prevent content from overflowing */
+            transition: all 0.3s ease;
+        }
+        
+        /* Styles for the picker/scroller */
+        .picker-container {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+        }
+        
+        .picker-overlay-top, .picker-overlay-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 88px;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .picker-overlay-top {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,1) 30%, rgba(0,0,0,0));
+        }
+        
+        .picker-overlay-bottom {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(0,0,0,1) 30%, rgba(0,0,0,0));
+        }
+        
+        .selection-indicator {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            right: 5%;
+            transform: translateY(-50%);
+            height: 44px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            z-index: 0;
+        }
+
+        #car-list {
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        #car-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        #car-list li {
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            scroll-snap-align: center;
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: #6b7280;
+            transition: color 0.3s ease, transform 0.3s ease;
+            transform: scale(0.9);
+        }
+        
+        .car-logo {
+            height: 28px;
+            width: 28px;
+            object-fit: contain;
+            filter: grayscale(1) brightness(0.6);
+            transition: filter 0.3s ease;
+        }
+
+        #car-list li.active {
+            color: #ffffff;
+            transform: scale(1);
+        }
+
+        #car-list li.active .car-logo {
+            filter: grayscale(0) brightness(1);
+        }
+
+        /* Connecting animation styles */
+        .connecting-visual {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pulse-ring {
+            position: absolute;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: pulse-animation 2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+            opacity: 0;
+        }
+        .pulse-ring:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+        .pulse-ring:nth-child(3) {
+            animation-delay: 1s;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(0.1); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        
+        /* Dashboard styles */
+        .car-card-bg {
+            background: linear-gradient(160deg, #1e3a8a 0%, #000000 70%);
+            border-radius: 20px;
+        }
+        
+        .drive-control-button {
+            background: rgba(30, 58, 138, 0.4);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            backdrop-filter: blur(10px);
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease;
+        }
+        .drive-control-button:active {
+             background: rgba(59, 130, 246, 0.7);
+        }
+
+        /* Connecting text animation */
+        .dots span {
+            animation: blink 1.4s infinite both; display: inline-block;
+        }
+        .dots span:nth-child(2) { animation-delay: .2s; }
+        .dots span:nth-child(3) { animation-delay: .4s; }
+        @keyframes blink {
+            0% { opacity: .2; } 20% { opacity: 1; } 100% { opacity: .2; }
+        }
+        
+        /* New minimal buttons */
+        .minimal-control-button {
+            color: #d1d5db;
+            transition: color 0.2s ease, transform 0.2s ease;
+            cursor: pointer;
+        }
+        .minimal-control-button:active, .minimal-control-button.active {
+            color: #3b82f6;
+            transform: scale(0.95);
+        }
+
+        #start-engine-button {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #4b5563;
+            transition: all 0.2s ease;
+        }
+        #start-engine-button.engine-on {
+            border-color: #22c55e;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+        }
+        #start-engine-button:active:not(.engine-on) {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Success popup animation */
+        .popup {
+            animation: fadeInOut 2.5s ease-in-out forwards;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: scale(0.95) translateY(10px); }
+            10%, 90% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Desktop and Tablet view */
+        @media (min-width: 480px) {
+            .app-container {
+                border-radius: 30px;
+                border: 1px solid #374151;
+                height: 90vh; /* Use viewport height for responsiveness */
+                max-height: 850px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container text-white">
+        
+        <!-- Screen 1: Car Selection -->
+        <div id="selection-screen" class="flex flex-col h-full">
+            <header class="relative flex items-center justify-center p-4">
+                <h1 class="text-lg font-semibold">Select Your Car Make</h1>
+            </header>
+            <main class="flex-grow flex flex-col justify-center">
+                <div class="picker-container w-full my-8">
+                    <div class="picker-overlay-top"></div>
+                    <div class="selection-indicator"></div>
+                    <ul id="car-list"></ul>
+                    <div class="picker-overlay-bottom"></div>
+                </div>
+            </main>
+            <footer class="p-6">
+                <button id="connect-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-lg transition-colors">
+                    Connect to Car
+                </button>
+            </footer>
+        </div>
+
+        <!-- Screen 2: Connecting Animation -->
+        <div id="connecting-screen" class="hidden flex-col h-full items-center justify-center text-center p-6">
+            <div class="connecting-visual">
+                <div class="pulse-ring"></div>
+                <div class="pulse-ring"></div>
+                <div class="pulse-ring"></div>
+                 <svg class="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h2 class="text-2xl font-bold mt-8 tracking-wider">Connecting to Car<span class="dots"><span>.</span><span>.</span><span>.</span></span></h2>
+            <p class="text-gray-400 mt-2">Establishing secure connection...</p>
+        </div>
+
+        <!-- Screen 3: Car Dashboard -->
+        <div id="dashboard-screen" class="hidden flex-col h-full">
+             <header class="relative flex items-center justify-between p-4 z-10">
+                 <button id="back-button" class="text-2xl">&lt;</button>
+                 <h1 class="text-lg font-semibold">Garage</h1>
+                 <div class="w-8"></div> <!-- Spacer -->
+            </header>
+            <main class="flex-grow p-4 flex flex-col justify-between relative">
+                 <!-- Popups Container -->
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full px-8 z-20 pointer-events-none">
+                    <!-- Engine Success Popup -->
+                    <div id="success-popup" class="hidden">
+                        <div class="bg-black/80 backdrop-blur-sm rounded-lg shadow-lg p-4 flex items-center space-x-3 border border-gray-700">
+                            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <span class="text-gray-200 font-semibold">Engine Started</span>
+                        </div>
+                    </div>
+                     <!-- Action Popup (for lock/unlock) -->
+                    <div id="action-popup" class="hidden">
+                        <div class="bg-black/80 backdrop-blur-sm rounded-lg shadow-lg p-4 flex items-center space-x-3 border border-gray-700">
+                            <div id="action-popup-icon" class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                <!-- Icon will be injected by JS -->
+                            </div>
+                            <span id="action-popup-text" class="text-gray-200 font-semibold">Action</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="car-card-bg p-4 flex flex-col items-center">
+                     <!-- Car Image and Timer Container -->
+                    <div class="relative w-full max-w-xs my-2">
+                        <img src="https://i.postimg.cc/1zzfJhPg/favpng-29695b22420b0be05298eae2fd517d77.png" alt="Silver Mercedes Benz" class="w-full drop-shadow-lg">
+                        <!-- Timer Overlay -->
+                        <div id="start-timer-overlay" class="hidden absolute inset-0 items-center justify-center">
+                            <svg class="w-24 h-24 transform -rotate-90">
+                                <circle class="text-gray-700" stroke-width="8" stroke="currentColor" fill="transparent" r="40" cx="48" cy="48"/>
+                                <circle id="timer-circle-progress" class="text-blue-500" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" stroke="currentColor" fill="transparent" r="40" cx="48" cy="48" style="transition: stroke-dashoffset 0.1s linear;"/>
+                            </svg>
+                            <span id="timer-text" class="absolute text-4xl font-bold text-white">3</span>
+                        </div>
+                    </div>
+                    <div class="text-center w-full mt-2 text-sm text-gray-400">
+                        <p>Updated 2 minutes ago</p>
+                    </div>
+                </div>
+                
+                 <div id="controls-container" class="flex items-center justify-around w-full px-4">
+                     <!-- Unlock Button -->
+                    <button id="unlock-button" class="minimal-control-button flex flex-col items-center gap-2">
+                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0v4m-5 9V14a1 1 0 00-1-1H9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1z"></path></svg>
+                         <span class="text-sm font-medium">Unlock</span>
+                    </button>
+                    
+                    <!-- Main Start Button -->
+                    <button id="start-engine-button" class="rounded-full flex flex-col items-center justify-center text-gray-300">
+                       <span id="start-text" class="text-lg font-bold tracking-wider">START</span>
+                       <div class="w-10 h-px bg-gray-600 my-1"></div>
+                       <span id="stop-text" class="text-lg font-bold tracking-wider text-gray-600">STOP</span>
+                    </button>
+
+                    <!-- Lock Button -->
+                    <button id="lock-button" class="minimal-control-button flex flex-col items-center gap-2">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        <span class="text-sm font-medium">Lock</span>
+                    </button>
+                </div>
+
+                <!-- Headlights Control -->
+                <div class="flex items-center justify-center gap-6 w-full px-4">
+                     <button id="lights-on-button" class="minimal-control-button flex items-center gap-2 p-2 rounded-lg">
+                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6 21V11a2 2 0 012-2h8a2 2 0 012 2v10M6 21a2 2 0 00-2 2h16a2 2 0 00-2-2H6z"></path></svg>
+                         <span>On</span>
+                    </button>
+                    <button id="lights-off-button" class="minimal-control-button flex items-center gap-2 p-2 rounded-lg active">
+                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 18v-1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                         <span>Off</span>
+                    </button>
+                </div>
+            </main>
+             <footer class="bg-black/20 border-t border-gray-800 p-2">
+                 <nav class="flex justify-around items-center">
+                     <button class="minimal-control-button flex flex-col items-center gap-1 w-20 active">
+                         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                         <span class="text-xs">Control</span>
+                     </button>
+                      <button class="minimal-control-button flex flex-col items-center gap-1 w-20">
+                         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                         <span class="text-xs">Map</span>
+                     </button>
+                     <button id="nav-drive-button" class="minimal-control-button flex flex-col items-center gap-1 w-20">
+                         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14l9-5-9-5-9 5 9 5z"></path><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-5.998 12.078 12.078 0 01.665-6.479L12 14z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6"></path></svg>
+                         <span class="text-xs">Drive</span>
+                     </button>
+                     <button class="minimal-control-button flex flex-col items-center gap-1 w-20">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                         <span class="text-xs">Settings</span>
+                     </button>
+                 </nav>
+            </footer>
+        </div>
+
+        <!-- Screen 4: Drive Mode -->
+        <div id="drive-mode-screen" class="hidden flex-col h-full">
+            <header class="relative flex items-center justify-between p-4">
+                 <button id="drive-back-button" class="text-xl">&lt;</button>
+                 <h1 class="text-lg font-semibold">Drive Mode</h1>
+                 <div class="w-8"></div> <!-- Spacer -->
+            </header>
+            <main class="flex-grow p-4 flex flex-col items-center justify-between">
+                <div class="text-center">
+                    <p class="text-gray-300 font-medium">MERCEDES BENZ</p>
+                    <h2 class="text-2xl font-bold">C-Class 2012</h2>
+                </div>
+                
+                <img src="https://i.postimg.cc/1zzfJhPg/favpng-29695b22420b0be05298eae2fd517d77.png" alt="Silver Mercedes Benz" class="w-full max-w-xs my-2 drop-shadow-lg">
+
+                <div class="grid grid-cols-3 gap-4 w-64 place-items-center">
+                    <div></div> <button class="drive-control-button"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg></button> <div></div>
+                    <button class="drive-control-button"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                    <div></div>
+                    <button class="drive-control-button"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                    <div></div> <button class="drive-control-button"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button> <div></div>
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Screen elements
+            const selectionScreen = document.getElementById('selection-screen');
+            const connectingScreen = document.getElementById('connecting-screen');
+            const dashboardScreen = document.getElementById('dashboard-screen');
+            const driveModeScreen = document.getElementById('drive-mode-screen');
+            
+            // Buttons and controls
+            const connectButton = document.getElementById('connect-button');
+            const backButton = document.getElementById('back-button');
+            const driveBackButton = document.getElementById('drive-back-button');
+            const successPopup = document.getElementById('success-popup');
+            const actionPopup = document.getElementById('action-popup');
+            const navDriveButton = document.getElementById('nav-drive-button');
+            const lightsOnButton = document.getElementById('lights-on-button');
+            const lightsOffButton = document.getElementById('lights-off-button');
+            const lockButton = document.getElementById('lock-button');
+            const unlockButton = document.getElementById('unlock-button');
+
+            // --- Car Selection Logic ---
+            const carMakes = [
+                { name: "CHRYSLER", domain: "chrysler.com" }, { name: "LEXUS", domain: "lexus.com" },
+                { name: "TESLA", domain: "tesla.com" }, { name: "BUICK", domain: "buick.com" },
+                { name: "DODGE", domain: "dodge.com" }, { name: "BMW", domain: "bmw.com" },
+                { name: "AUDI", domain: "audi.com" }, { name: "CHEVROLET", domain: "chevrolet.com" },
+                { name: "MERCEDES-BENZ", domain: "mercedes-benz.com" }, { name: "TOYOTA", domain: "toyota.com" },
+            ];
+            
+            const carList = document.getElementById('car-list');
+            const listItemsHTML = ['<li></li>', '<li></li>', ...carMakes.map(make => `<li><img src="https://logo.clearbit.com/${make.domain}" alt="${make.name} Logo" class="car-logo" onerror="this.style.display='none'"><span>${make.name}</span></li>`), '<li></li>', '<li></li>'].join('');
+            carList.innerHTML = listItemsHTML;
+            
+            const items = carList.querySelectorAll('li');
+            const itemHeight = 44; 
+
+            const updateActiveItem = () => {
+                const scrollCenter = carList.scrollTop + carList.clientHeight / 2;
+                items.forEach(item => {
+                    if (!item.innerHTML.trim()) return;
+                    const itemCenter = item.offsetTop - carList.offsetTop + item.clientHeight / 2;
+                    const distance = Math.abs(scrollCenter - itemCenter);
+                    if (distance < itemHeight / 2) item.classList.add('active');
+                    else item.classList.remove('active');
+                });
+            };
+            carList.addEventListener('scroll', updateActiveItem);
+            updateActiveItem();
+
+            // --- Screen Transition Logic ---
+            connectButton.addEventListener('click', () => {
+                selectionScreen.classList.add('hidden');
+                connectingScreen.classList.remove('hidden');
+                connectingScreen.classList.add('flex');
+
+                setTimeout(() => {
+                    connectingScreen.classList.add('hidden');
+                    connectingScreen.classList.remove('flex');
+                    dashboardScreen.classList.remove('hidden');
+                    dashboardScreen.classList.add('flex');
+                }, 3500);
+            });
+
+            backButton.addEventListener('click', () => {
+                dashboardScreen.classList.add('hidden');
+                dashboardScreen.classList.remove('flex');
+                selectionScreen.classList.remove('hidden');
+                selectionScreen.classList.add('flex');
+                toggleEngineState(true); // Force stop engine on exit
+            });
+
+            // --- Engine Start Hold Logic ---
+            const startEngineButton = document.getElementById('start-engine-button');
+            const startTimerOverlay = document.getElementById('start-timer-overlay');
+            const timerText = document.getElementById('timer-text');
+            const timerCircleProgress = document.getElementById('timer-circle-progress');
+            let startTimeout;
+            let startInterval;
+            const holdDuration = 3000; // 3 seconds
+            const circleCircumference = 2 * Math.PI * 40; // 2 * pi * r
+
+            const startHold = (event) => {
+                event.preventDefault();
+                if (startEngineButton.classList.contains('engine-on')) {
+                    toggleEngineState();
+                    return;
+                }
+                
+                startTimerOverlay.classList.remove('hidden');
+                startTimerOverlay.classList.add('flex');
+                
+                let startTime = Date.now();
+                startTimeout = setTimeout(completeHold, holdDuration);
+                
+                startInterval = setInterval(() => {
+                    const elapsedTime = Date.now() - startTime;
+                    const remainingTime = Math.max(0, holdDuration - elapsedTime);
+                    const remainingSeconds = Math.ceil(remainingTime / 1000);
+                    
+                    timerText.textContent = remainingSeconds;
+                    const progress = elapsedTime / holdDuration;
+                    const offset = circleCircumference * (1 - progress);
+                    timerCircleProgress.style.strokeDashoffset = offset;
+                }, 16);
+            };
+
+            const endHold = () => {
+                clearTimeout(startTimeout);
+                clearInterval(startInterval);
+                startTimerOverlay.classList.add('hidden');
+                startTimerOverlay.classList.remove('flex');
+                timerCircleProgress.style.strokeDashoffset = circleCircumference;
+            };
+
+            const completeHold = () => {
+                endHold();
+                toggleEngineState();
+                if (startEngineButton.classList.contains('engine-on')) {
+                    showSuccessPopup();
+                }
+            };
+            
+            const toggleEngineState = (forceStop = false) => {
+                 const isStarted = startEngineButton.classList.contains('engine-on');
+                 if (isStarted || forceStop) {
+                     startEngineButton.classList.remove('engine-on');
+                     document.getElementById('start-text').classList.remove('text-gray-600');
+                     document.getElementById('stop-text').classList.add('text-gray-600');
+                     document.getElementById('stop-text').classList.remove('text-green-400');
+                 } else {
+                     startEngineButton.classList.add('engine-on');
+                     document.getElementById('start-text').classList.add('text-gray-600');
+                     document.getElementById('stop-text').classList.remove('text-gray-600');
+                     document.getElementById('stop-text').classList.add('text-green-400');
+                 }
+            };
+
+            const showSuccessPopup = () => {
+                successPopup.classList.remove('hidden');
+                successPopup.parentElement.classList.add('popup');
+                setTimeout(() => {
+                    successPopup.classList.add('hidden');
+                    successPopup.parentElement.classList.remove('popup');
+                }, 2500);
+            };
+            
+            const showActionPopup = (message, iconSvg) => {
+                document.getElementById('action-popup-text').textContent = message;
+                document.getElementById('action-popup-icon').innerHTML = iconSvg;
+                actionPopup.classList.remove('hidden');
+                actionPopup.parentElement.classList.add('popup');
+                setTimeout(() => {
+                    actionPopup.classList.add('hidden');
+                    actionPopup.parentElement.classList.remove('popup');
+                }, 2500);
+            };
+
+            startEngineButton.addEventListener('mousedown', startHold);
+            startEngineButton.addEventListener('touchstart', startHold);
+            startEngineButton.addEventListener('mouseup', endHold);
+            startEngineButton.addEventListener('mouseleave', endHold);
+            startEngineButton.addEventListener('touchend', endHold);
+
+            // --- Lock/Unlock Logic ---
+            const lockIconSvg = `<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>`;
+            const unlockIconSvg = `<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0v4m-5 9V14a1 1 0 00-1-1H9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1z"></path></svg>`;
+
+            lockButton.addEventListener('click', () => {
+                lockButton.classList.add('active');
+                unlockButton.classList.remove('active');
+                showActionPopup('Vehicle Locked', lockIconSvg);
+            });
+
+            unlockButton.addEventListener('click', () => {
+                unlockButton.classList.add('active');
+                lockButton.classList.remove('active');
+                showActionPopup('Vehicle Unlocked', unlockIconSvg);
+            });
+
+            // --- Drive Mode & Nav Logic ---
+            navDriveButton.addEventListener('click', () => {
+                dashboardScreen.classList.add('hidden');
+                dashboardScreen.classList.remove('flex');
+                driveModeScreen.classList.remove('hidden');
+                driveModeScreen.classList.add('flex');
+            });
+            
+            driveBackButton.addEventListener('click', () => {
+                driveModeScreen.classList.add('hidden');
+                driveModeScreen.classList.remove('flex');
+                dashboardScreen.classList.remove('hidden');
+                dashboardScreen.classList.add('flex');
+            });
+
+            // --- Headlights Logic ---
+            lightsOnButton.addEventListener('click', () => {
+                lightsOnButton.classList.add('active');
+                lightsOffButton.classList.remove('active');
+            });
+
+            lightsOffButton.addEventListener('click', () => {
+                lightsOffButton.classList.add('active');
+                lightsOnButton.classList.remove('active');
+            });
+
+            // Initial state
+            unlockButton.classList.add('active');
+        });
+    </script>
+</body>
+</html>
+
